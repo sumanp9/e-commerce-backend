@@ -3,6 +3,9 @@ const { where } = require("sequelize");
 const db =  require("../models/index");
 const eCommerceDB =  db.ecommerce;
 
+const {hashPassword, comparePassword} = require('../util/encrypt');
+const { compare, hash } = require("bcryptjs");
+
 
 
 exports.findAllUsers = (req, res) => {
@@ -27,8 +30,17 @@ exports.findUser = async(req, res) =>{
             message: "Content can not be empty!"
             });      
         }
+
+        const hashedPassword = await eCommerceDB.User.findOne({
+            where: {user_name: req.body.user_name},
+            attributes:['password']
+        })
+        
+       const isValidPassword =  await comparePassword(req.body.password, hashedPassword.password);
+
+       if(isValidPassword) {
         const person = await eCommerceDB.User.findOne({
-            where: {user_name: req.body.user_name, password: req.body.password},
+            where: {user_name: req.body.user_name},
             attributes:['id', 'name', 'email', 'role_id']
         });
         
@@ -49,10 +61,14 @@ exports.findUser = async(req, res) =>{
             }
         };
         return res.send(userData)
+       } else {
+        console.log('invalid password')
+       }
+
     }catch(err) {
-        console.error(err);
-        return res.status(500).json({message: "internal server error"});
-    }
+            console.error(err);
+            return res.status(500).json({message: "internal server error"});
+        }
 }
 
 exports.findAllCategories = async (req, res) => {
@@ -96,29 +112,20 @@ exports.createAccount = async (req, res) => {
             });
             return;
         }
+        const hashedPassword =  await hashPassword(req.body.password);
+        console.log(await hashPassword(req.body.password))
 
         const userData = {
             name: req.body.name,
             email: req.body.email,
             user_name: req.body.user_name,
-            password: req.body.password,
+            password: hashedPassword,
             phone_number: req.body.phone,
             billing_address: req.body.billing_address,
             role_id: 2
-        }    
+        }
     
         const User = await eCommerceDB.User.create(userData);
-
-      /*  try{
-            const defaultRole = {
-                user_id: User.dataValues.id,
-                role_type: 'User'
-            };
-            const newRole = await eCommerceDB.Role.create(defaultRole)
-            
-        }catch(error) {
-            console.error(error.message);
-        }*/
 
         res.status(201).json({ message: 'User created successfully' });
 
@@ -128,29 +135,6 @@ exports.createAccount = async (req, res) => {
         res.status(500).json({ error: 'An error occurred while creating the user.' });    
     }
 };
-
-
-/*
-exports.updateRole = async (req, res) => {
-
-    try{
-        const userRole = {
-            user_id: req.body.id,
-            role_type: req.body.role
-        }
-
-        await eCommerceDB.Role.update(
-            {role_type},
-            {where: {user_id}}
-        );
-        res.status(200).json({ message: 'Role updated successfully' });
-
-    }
-    catch(error){
-        res.status(500).json({ error: 'An error occurred while updating the user role.' });    
-    }
-};*/
-
 
 exports.addProduct = async(req, res) =>{
 
@@ -268,7 +252,8 @@ exports.getProduct = async(req,res) =>{
         console.error(err.message);
         res.status(500).json({error: 'An error occured while fetching the product'});
     }
-}
+};
+
 
 
 

@@ -21,6 +21,6 @@ const db ={};
 db.sequelize = Sequelize;
 db.sequelize = sequelize;
 
-db.ecommerce = require("./ecommerce_model")(sequelize, Sequelize); // need to define model here
+db.ecommerce = require("./ecommerce_model")(sequelize, Sequelize);
 
 module.exports =db;

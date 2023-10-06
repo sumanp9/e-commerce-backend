@@ -107,25 +107,71 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: false
   }) 
 
+  const Cart = sequelize.define('Cart', {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true
+    },
+    quantity: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    }
+  }, {
+    timestamps: false
+  })
 
-  //Cart Model 
+  const Transaction = sequelize.define('Transaction',  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
 
-  /*
-  id:
-  user_id:
-  products & its quantity
-  total?
-   */
+    session_id: {
+      type: DataTypes.STRING,
+    }
+  }, {
+    timestamps: false
+  })
 
-
-  //Role.belongsTo(User, { foreignKey: 'user_id', onDelete: 'CASCADE' });
   User.belongsTo(Role, { foreignKey: 'role_id', onDelete: 'CASCADE' });
   Product.belongsTo(Category, { foreignKey: 'category_id', onDelete: 'CASCADE'});
+  User.hasMany(Cart, {
+    foreignKey: 'user_id',
+    as: 'carts'
+  })
+
+  Cart.belongsTo(User, {
+    foreignKey: 'user_id',
+    onDelete:'CASCADE'
+  })
+
+  Product.hasMany(Cart, {
+    foreignKey: 'product_id',
+    as: 'carts'
+  })
+
+  Cart.belongsTo(Product, {
+    foreignKey: 'product_id',
+    onDelete:'CASCADE'
+  })
+
+  User.hasMany(Transaction,{
+    foreignKey: 'user_id',
+    onDelete: 'CASCADE'
+  })
+
+  Transaction.belongsTo(User, {
+    foreignKey: 'user_id',
+    onDelete: 'CASCADE'
+  })
 
   return {
     User,
     Role,
     Product,
-    Category
+    Category,
+    Cart
   };
 };

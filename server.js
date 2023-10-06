@@ -1,15 +1,24 @@
 const express =  require('express');
-const app = express();
 const cors = require('cors');
+const bodyparser  = require('body-parser');
+
+const app = express();
+
+
 
 const corsOptions = {
-    origin: "http://localhost:4200"
+    origin: "http://localhost:4200",
+    credentials: true
 };
 
 
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
+app.use(express.static("public"));
+app.use(bodyparser.urlencoded({extended: false}));
+app.use(bodyparser.json())
+
 
 const db =  require("./app/models/index");
 
@@ -19,12 +28,6 @@ db.sequelize.sync()
     .catch((err) => {
         console.log("failed to sync db: "+ err.message);
     })
-
-app.get("/", (req, res) => {
-    res.json({
-        message: "Welcome to my ecommerce website"
-    })
-})
 
 require("./app/routes/routes.js") (app);
 const PORT = process.env.PORT || 8080;

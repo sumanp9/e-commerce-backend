@@ -5,6 +5,7 @@ const eCommerceDB =  db.ecommerce;
 
 const {hashPassword, comparePassword} = require('../util/encrypt');
 const { compare, hash } = require("bcryptjs");
+const ecommerce_model = require("../models/ecommerce_model");
 
 
 
@@ -69,7 +70,7 @@ exports.findUser = async(req, res) =>{
             console.error(err);
             return res.status(500).json({message: "internal server error"});
         }
-}
+};
 
 exports.findAllCategories = async (req, res) => {
 
@@ -83,6 +84,20 @@ exports.findAllCategories = async (req, res) => {
             return res.status(500).json({message: "internal server error"});
         }
 
+}
+
+exports.addCategory = async(req, res) => {
+
+    const category = {name: req.body.name};
+    try{
+        await eCommerceDB.Category.create(category);
+        res.status(201).json({ message: 'Category created successfully' });
+
+    }catch(err) {
+        console.error(err);
+        return res.status(500).json({message: "internal server error"});
+    }
+            
 }
 
 exports.findByCategory = async(req, res) => {
@@ -115,17 +130,19 @@ exports.createAccount = async (req, res) => {
         const hashedPassword =  await hashPassword(req.body.password);
         console.log(await hashPassword(req.body.password))
 
+        console.log(req.body)
+
         const userData = {
             name: req.body.name,
             email: req.body.email,
             user_name: req.body.user_name,
             password: hashedPassword,
             phone_number: req.body.phone,
-            billing_address: req.body.billing_address,
+            billing_address: req.body.address,
             role_id: 2
         }
     
-        const User = await eCommerceDB.User.create(userData);
+        await eCommerceDB.User.create(userData);
 
         res.status(201).json({ message: 'User created successfully' });
 
@@ -142,6 +159,15 @@ exports.addProduct = async(req, res) =>{
     console.log("Add Product")
 
     try{
+
+        const product = await eCommerceDB.Product.findOne({
+            where: {name: req.body.name} 
+        })
+
+        if(product) {
+            return res.status(409).json({ message: "Duplicate entry. The item you're trying to add already exists. "});
+        }
+
         const ProductData = {
             name: req.body.name,
             image: req.body.image,
@@ -165,7 +191,7 @@ exports.updateProduct = async(req, res) => {
 
     try{
         const productData  = req.body;
-       await  eCommerceDB.Product.udpate(productData, {
+       await  eCommerceDB.Product.update(productData, {
             where: {id: productData.id}
         })
         return res.status(201).json({ message: 'Product updated successfully' })
@@ -250,9 +276,206 @@ exports.getProduct = async(req,res) =>{
             then((product) => res.send(product));
     } catch(err) {
         console.error(err.message);
-        res.status(500).json({error: 'An error occured while fetching the product'});
+        return res.status(500).json({error: 'An error occured while fetching the product'});
     }
 };
+
+exports.getCart = async(req, res) => {
+
+    try{
+        if (!req.query.user_id) {
+           return res.status(400).send({
+            message: "Content can not be empty!"
+            });
+            return;
+        }
+
+        await eCommerceDB.Cart.findAll({
+            where: {user_id: req.query.user_id}
+        }).then((listOfCart) => {
+            return res.send(listOfCart);
+        })
+
+    }catch(err) {
+        console.error(err.message);
+        res.status(500).json({error: 'An error occured while fetching user cart'});
+    }
+};
+
+exports.addToCart = async(req, res) => {
+
+    const cartData = {
+        user_id: req.body.user_id,
+        product_id: req.body.product.id,
+        quantity: req.body.product.quantity,
+    }
+
+    try{
+        if (!req.body.user_id) {
+            res.status(400).send({
+            message: "Content can not be empty!"
+            });
+            return;
+        }
+
+        const product = await eCommerceDB.Cart.findOne(
+            {where: {user_id: cartData.user_id , product_id: cartData.product_id }}
+        )
+
+        if(product) {
+            cartData.quantity = product.quantity+cartData.quantity;
+            await eCommerceDB.Cart.update(cartData, {
+                where: {id: product.id}
+            }).then(() => {
+                return  res.status(201).json({ message: ' Added to cart successfully' });
+             })
+
+        } else(
+            await eCommerceDB.Cart.create(cartData, {
+                where: {user_id: cartData.user_id, product_id: cartData.user_id}
+            }).then(() => {
+               return  res.status(201).json({ message: ' Added to cart successfully' });
+            })
+        )
+
+       
+    } catch (err) {
+        console.error(err.message);
+        return res.status(500).json({error: 'An error occured while adding to cart'});
+    
+    }
+};
+
+exports.getCartQuantity = async(req, res) => {
+
+    try{
+        const user_id = req.query.user_id;
+        let totalQuantity = 0;
+        const quantityList = await eCommerceDB.Cart.findAll({
+            where: {user_id : user_id},
+            attributes: ['quantity']
+        })
+
+        for (const cart of quantityList) {
+        totalQuantity += cart.quantity;
+        }
+        console.log(totalQuantity);
+
+        return res.send({totalQuantity})
+    } catch(err) {
+        console.error(err.message);
+        return res.status(500).json({error: 'An error occured '});
+    
+    }
+};
+
+exports.CartDetails = async (req, res) => {
+    
+    try{
+        if(!req.query.user_id) {
+            return res.status(400).send({
+                message: "Content can not be empty!"
+                });
+        } 
+       
+
+       const cartData = await eCommerceDB.Cart.findAll({
+        where: {user_id: req.query.user_id},
+        include: [
+            {
+              model: eCommerceDB.Product,
+              attributes:['id','name', 'price', 'image'],
+              required: true
+            }
+          ],
+          attributes: ['id', 'quantity']
+      })
+
+      let grandTotal = 0;
+
+      const formattedData =cartData.map(item => {
+        const product = item.Product;
+        const total = item.quantity* product.price;
+
+        grandTotal+=total;
+
+        return( {
+            id: item.id,
+            quantity: item.quantity,
+            product: {
+                id: product.id,
+              name: product.name,
+              price: product.price,
+              image: product.image
+            },
+            total: Math.round((total + Number.EPSILON) * 100) / 100
+          })
+          
+      })
+
+      
+      grandTotal = Math.round((grandTotal + Number.EPSILON) * 100) / 100
+
+      return res.send({ data: formattedData, grandTotal: grandTotal })
+
+    } catch(err) {
+        console.error(err.message);
+        return res.status(500).json({error: 'An error occured '});
+    }
+};
+
+exports.increaseCartQty = async(req, res) => {
+
+
+    console.log("In increase qty method")
+
+    try{
+
+        if(!req.body.id) {
+            return res.status(400).send({
+                message: "Content can not be empty!"
+                });
+        }
+
+        const data = {
+            id: req.body.id,
+            product_id: req.body.product_id,
+            increment: req.body.increment
+        }
+
+        const qty = await eCommerceDB.Cart.findOne({
+            where: {id: data.id},
+            attributes: ['quantity']
+        })
+
+        let incrementValue = data.increment? 1 : -1;
+
+            await eCommerceDB.Cart.update(    
+            {quantity: qty.quantity+ incrementValue},
+            {where: {id : data.id, product_id: data.product_id}
+        }).then((result => {
+            console.log("Cart Value Updated ");
+        }))
+    
+    } catch(err) {
+        console.log(err);
+        return res.status(500).send("internal server error")
+    }
+};
+
+ exports.deleteCartItem = async(req, res) => {
+    console.log("Deleting Item from Cart")
+    try {
+
+        await eCommerceDB.Cart.destroy({
+          where: { id: req.query.id}
+        });
+        console.log('Item removed from the cart.');
+      } catch (error) {
+        console.error('Error removing item from cart:', error);
+      }
+    };
+    
 
 
 

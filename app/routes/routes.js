@@ -43,6 +43,10 @@ module.exports = app => {
     router.delete("/cartItem", controller.deleteCartItem);
 
     router.post("/checkout", checkoutController.checkout);
+
+    router.put("/transaction", controller.updateInventory);
+
+    router.get("/transactions", controller.getTransactions);
     //router.put("/cart", controller.updateCart);
 
     //Cart Http methods go here

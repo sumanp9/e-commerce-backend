@@ -128,11 +128,20 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
     },
 
-    session_id: {
+    product_name: {
       type: DataTypes.STRING,
+    },
+
+    quantity: {
+      type: DataTypes.INTEGER,
+    },
+
+    price: {
+      type: DataTypes.DECIMAL(10,2),
+      allowNull: false
     }
   }, {
-    timestamps: false
+    timestamps: false //to display when transaction happened
   })
 
   User.belongsTo(Role, { foreignKey: 'role_id', onDelete: 'CASCADE' });
@@ -172,6 +181,7 @@ module.exports = (sequelize, DataTypes) => {
     Role,
     Product,
     Category,
-    Cart
+    Cart, 
+    Transaction
   };
 };

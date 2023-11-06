@@ -1,5 +1,5 @@
 
-const { where } = require("sequelize");
+const { where, Transaction } = require("sequelize");
 const db =  require("../models/index");
 const eCommerceDB =  db.ecommerce;
 
@@ -475,6 +475,58 @@ exports.increaseCartQty = async(req, res) => {
         console.error('Error removing item from cart:', error);
       }
     };
+
+exports.updateInventory = async(req, res) => {
+
+    data = req.body.cartData.data;
+    amount = req.body.grandTotal;
+    id = req.body.id
+    console.log(data)
+//maybe user email instead of user_id
+    try{
+        for (const item of data) {
+
+            const productQuantity = await eCommerceDB.Product.findOne({
+                where: { id: item.product.id },
+                attributes: ['quantity']
+            });
+            await eCommerceDB.Product.update(    
+                {quantity:  productQuantity.quantity- item.quantity},
+                {where: {id : item.product.id}
+            });
+
+            await eCommerceDB.Cart.destroy({
+                where: {id: item.id}
+            });
+
+            const transactionData = {
+                user_id: id ,
+                product_name: item.product.name, 
+                quantity: item.quantity,
+                price: item.product.price
+            }
+
+            await eCommerceDB.Transaction.create(transactionData);
+
+        }
+    } catch(error) {
+        console.error('Error', error)
+    }
+
+}
+
+exports.getTransactions = async (req, res) => {
+
+    //only admin feature
+
+    try{
+        const transactionsList = await eCommerceDB.Transaction.findAll();
+
+        return res.send(transactionsList)
+    } catch(error) {
+        console.error("Error", error);
+    }
+}
     
 
 

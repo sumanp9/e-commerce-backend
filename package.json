@@ -19,6 +19,6 @@
     "pg-hstore": "^2.3.4",
     "postgres": "^3.3.5",
     "sequelize": "^6.33.0",
-    "stripe": "^10.7.0"
+    "stripe": "^10.17.0"
   }
 }

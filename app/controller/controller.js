@@ -7,9 +7,22 @@ const {hashPassword, comparePassword} = require('../util/encrypt');
 const { compare, hash } = require("bcryptjs");
 const ecommerce_model = require("../models/ecommerce_model");
 
+let ioInstance;
+
+exports.setIoInstance = function (io){
+    ioInstance = io;
+  }
 
 
 exports.findAllUsers = (req, res) => {
+console.log("ioInstance:" + ioInstance)
+    if(ioInstance){
+        if(ioInstance){
+            console.log("getting event");
+            ioInstance.emit('test event',  [1, 2, 3]);
+        } else {
+            console.error('Socket.IO instance not set. Make sure to call setIoInstance(io) before emitting values.');                }
+    }
     eCommerceDB.User.findAll(
         {attributes: ['id','name']}
     )
@@ -478,11 +491,58 @@ exports.increaseCartQty = async(req, res) => {
 
 exports.updateInventory = async(req, res) => {
 
-    data = req.body.cartData.data;
-    amount = req.body.grandTotal;
-    id = req.body.id
-    console.log(data)
+    const data = req.body.cartData.data;
+    console.log(req.body)
+    const charge_id = req.body.charge_id;
+    const name = req.body.name;
+    const amount = req.body.cartData.grandTotal;
+    const id = req.body.id
+
+    try{
+        const transactionData = {
+            user_id: id,
+            user: name,//userName, 
+            total: amount,
+            charge_id: charge_id   
+        }
+
+        console.log("Transaction Data: ", transactionData)
+        const newTransaction = await eCommerceDB.Transaction.create(transactionData);
+        const trans_id = newTransaction.id;
+        await transactionDetails(trans_id, data);
+            if(ioInstance){
+                console.log("getting event");
+                ioInstance.emit('test event',  transactionData);
+            } else {
+                console.error('Socket.IO instance not set. Make sure to call setIoInstance(io) before emitting values.');                
+            }
+        return res.status(201).json(newTransaction);
+
+    }catch(error){
+        console.error('Error', error)
+         res.status(500).json({ error: 'Internal Server Error' });
+    }
 //maybe user email instead of user_id
+
+
+}
+
+exports.getTransactions = async (req, res) => {
+  
+    //only admin feature
+
+    try{
+        const transactionsList = await eCommerceDB.Transaction.findAll();
+
+        return res.send(transactionsList)
+    } catch(error) {
+        console.error("Error", error);
+    }
+}
+
+async function transactionDetails(id, data) {
+    console.log("id is "+ id)
+    let transactionList = [];
     try{
         for (const item of data) {
 
@@ -499,36 +559,25 @@ exports.updateInventory = async(req, res) => {
                 where: {id: item.id}
             });
 
-            const transactionData = {
-                user_id: id ,
+   
+
+            const transactionDetails = {
+                transaction_id: id,//check this one(needs to be saved 1st)
                 product_name: item.product.name, 
                 quantity: item.quantity,
                 price: item.product.price
             }
+            transactionList.push(transactionDetails);            
+        }
 
-            await eCommerceDB.Transaction.create(transactionData);
-
+        try{
+            await eCommerceDB.TransactionDetails.bulkCreate(transactionList);
+        } catch(error) {
+            console.error('Error during bulk creation of transactions :', error);
         }
     } catch(error) {
         console.error('Error', error)
-    }
-
-}
-
-exports.getTransactions = async (req, res) => {
-
-    //only admin feature
-
-    try{
-        const transactionsList = await eCommerceDB.Transaction.findAll();
-
-        return res.send(transactionsList)
-    } catch(error) {
-        console.error("Error", error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
-    
-
-
-
 

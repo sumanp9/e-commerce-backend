@@ -128,12 +128,44 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
     },
 
+    charge_id: {
+      type: DataTypes.STRING,
+    },
+
+    user: {
+      type: DataTypes.STRING,
+    },
+
+    total: { 
+      type: DataTypes.DECIMAL(10,2),
+      allowNull: false
+    }
+  }, {
+    timestamps: false //to display when transaction happened
+  })
+
+  const TransactionDetails = sequelize.define('TransactionDetails',  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+
     product_name: {
       type: DataTypes.STRING,
+      allowNull: false
+
     },
 
     quantity: {
       type: DataTypes.INTEGER,
+      allowNull: false
+
+    },
+
+    transaction_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     },
 
     price: {
@@ -171,6 +203,15 @@ module.exports = (sequelize, DataTypes) => {
     onDelete: 'CASCADE'
   })
 
+  TransactionDetails.belongsTo(Transaction, {
+    foreignKey: 'transaction_id',
+    onDelete: 'CASCADE'
+  })
+
+  Transaction.hasMany(TransactionDetails, {
+    foreignKey: 'transaction_id',
+    as: 'transactiondetails'
+  })
   Transaction.belongsTo(User, {
     foreignKey: 'user_id',
     onDelete: 'CASCADE'
@@ -182,6 +223,7 @@ module.exports = (sequelize, DataTypes) => {
     Product,
     Category,
     Cart, 
-    Transaction
+    Transaction,
+    TransactionDetails
   };
 };

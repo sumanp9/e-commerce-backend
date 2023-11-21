@@ -581,3 +581,22 @@ async function transactionDetails(id, data) {
     }
 }
 
+exports.getTransactionDetails = async (req, res) => {
+    //
+    const id = req.query.transaction_id;
+    console.log(id);
+    try{
+        const transactionsList = await eCommerceDB.TransactionDetails.findAll({
+            where: {transaction_id: id}
+        })
+
+        console.log(transactionsList)
+
+        return res.status(201).json(transactionsList);
+
+    } catch{
+        console.error('Error', error)
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+

@@ -44,12 +44,11 @@ module.exports = app => {
 
     router.post("/checkout", checkoutController.checkout);
 
-    router.put("/transaction", controller.updateInventory);
+    router.put("/transaction", controller.updateInventory);//inventory
 
-    router.get("/transactions", controller.getTransactions);
-    //router.put("/cart", controller.updateCart);
+    router.get("/transactions", controller.getTransactions);//just transaction
+    router.get("/transactionsDetails", controller.getTransactionDetails);
 
-    //Cart Http methods go here
-
+    
     app.use(router);
 }

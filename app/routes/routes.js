@@ -2,12 +2,13 @@ module.exports = app => {
 
     const controller = require("../controller/controller");
     const checkoutController = require("../controller/checkoutController"); 
+    const passport = require("passport")
 
     var router =  require("express").Router();
 
     router.post("/login", controller.findUser);
 
-    router.get("/users", controller.findAllUsers);
+    router.get("/users", passport.authenticate('jwt', {session:false}), controller.findAllUsers);
 
     router.get("/categories", controller.findAllCategories);
 
@@ -16,9 +17,6 @@ module.exports = app => {
     router.get("/category", controller.findByCategory);
 
     router.post("/user", controller.createAccount);
-    
-
-    //router.put("/role", controller.updateRole);
     
     router.get("/products", controller.productList);
 
@@ -46,8 +44,8 @@ module.exports = app => {
 
     router.put("/transaction", controller.updateInventory);//inventory
 
-    router.get("/transactions", controller.getTransactions);//just transaction
-    router.get("/transactionsDetails", controller.getTransactionDetails);
+    router.get("/transactions",  passport.authenticate('jwt', {session:false}), controller.getTransactions);//just transaction
+    router.get("/transactionsDetails", passport.authenticate('jwt', {session:false}), controller.getTransactionDetails);
 
     
     app.use(router);

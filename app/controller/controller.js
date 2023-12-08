@@ -6,6 +6,9 @@ const eCommerceDB =  db.ecommerce;
 const {hashPassword, comparePassword} = require('../util/encrypt');
 const { compare, hash } = require("bcryptjs");
 const ecommerce_model = require("../models/ecommerce_model");
+const jwt = require('jsonwebtoken');
+
+const secretKey = process.env.SECRET_KEY || 'fallback-secret-key';
 
 let ioInstance;
 
@@ -14,16 +17,10 @@ exports.setIoInstance = function (io){
   }
 
 
-exports.findAllUsers = (req, res) => {
-console.log("ioInstance:" + ioInstance)
-    if(ioInstance){
-        if(ioInstance){
-            console.log("getting event");
-            ioInstance.emit('test event',  [1, 2, 3]);
-        } else {
-            console.error('Socket.IO instance not set. Make sure to call setIoInstance(io) before emitting values.');                }
-    }
-    eCommerceDB.User.findAll(
+exports.findAllUsers = async (req, res) => {
+console.log("params" + req.headers['authorization'])
+const token = req.headers['authorization'].split(' ')[1];
+    await eCommerceDB.User.findAll(
         {attributes: ['id','name']}
     )
         .then((users) => {
@@ -37,11 +34,10 @@ console.log("ioInstance:" + ioInstance)
 
 exports.findUser = async(req, res) =>{
 
-    console.log("in findUsder", req.body)
     try{
         if (!req.body.user_name) {
             return res.status(400).send({
-            message: "Content can not be empty!"
+            message: "Username can not be empty!"
             });      
         }
 
@@ -61,11 +57,18 @@ exports.findUser = async(req, res) =>{
         if(!person) {
             return res.status(500).json({message: "User not found."});
         }
+
+        
         const role = await eCommerceDB.Role.findOne({
             where: {id: person.role_id},
             attributes: ['role_type']
         });
+        console.log("Role is: " + role.role_type)
+        const token = jwt.sign({sub: person.id,
+            role: role.role_type
+         }, secretKey, {expiresIn: '1h'});
 
+        //console.log(jwt.verify(token, secretKey).sub)
         const userData = {
             user:{
                 id: person.id,
@@ -74,9 +77,9 @@ exports.findUser = async(req, res) =>{
                 role: role.role_type
             }
         };
-        return res.send(userData)
+        return res.send({userData, token})
        } else {
-        console.log('invalid password')
+        res.status(401).json({ message: 'Authentication failed' });
        }
 
     }catch(err) {
@@ -522,15 +525,9 @@ exports.updateInventory = async(req, res) => {
         console.error('Error', error)
          res.status(500).json({ error: 'Internal Server Error' });
     }
-//maybe user email instead of user_id
-
-
 }
 
 exports.getTransactions = async (req, res) => {
-  
-    //only admin feature
-
     try{
         const transactionsList = await eCommerceDB.Transaction.findAll();
 
@@ -582,7 +579,6 @@ async function transactionDetails(id, data) {
 }
 
 exports.getTransactionDetails = async (req, res) => {
-    //
     const id = req.query.transaction_id;
     console.log(id);
     try{

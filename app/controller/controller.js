@@ -239,7 +239,7 @@ exports.productList = async(req, res) =>{
             then((products) => {
                 res.send(products);
             })
-    } catch(error) {
+    } catch(err) {
         console.error(err.message);
         res.status(500).json({ error: 'An error occurred while fetching the product list.' });    
     }

@@ -88,8 +88,22 @@ module.exports = (sequelize, DataTypes) => {
     price: {
         type: DataTypes.DECIMAL(10,2),
         allowNull: false
-    }, 
+    },
   }, {
+    timestamps: false
+  })
+
+  const ProductRating = sequelize.define('ProductRating',  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true
+    },
+    rating: {
+      type: DataTypes.DECIMAL,
+      allowNull: true
+    }
+  },  {
     timestamps: false
   })
 
@@ -193,6 +207,16 @@ module.exports = (sequelize, DataTypes) => {
     as: 'carts'
   })
 
+  Product.hasMany(ProductRating, {
+    foreignKey: 'product_id', 
+    as: 'product_id'
+  })
+
+  User.hasMany(ProductRating, {
+    foreignKey: 'user_id', 
+    as: 'user_id'
+  })
+
   Cart.belongsTo(Product, {
     foreignKey: 'product_id',
     onDelete:'CASCADE'
@@ -224,6 +248,7 @@ module.exports = (sequelize, DataTypes) => {
     Category,
     Cart, 
     Transaction,
-    TransactionDetails
+    TransactionDetails, 
+    ProductRating
   };
 };

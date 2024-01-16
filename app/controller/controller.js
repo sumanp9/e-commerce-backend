@@ -1,5 +1,5 @@
 
-const { where, Transaction } = require("sequelize");
+const { where, Transaction, Sequelize } = require("sequelize");
 const db =  require("../models/index");
 const eCommerceDB =  db.ecommerce;
 
@@ -7,6 +7,7 @@ const {hashPassword, comparePassword} = require('../util/encrypt');
 const { compare, hash } = require("bcryptjs");
 const ecommerce_model = require("../models/ecommerce_model");
 const jwt = require('jsonwebtoken');
+const { default: Decimal } = require("decimal.js");
 
 const secretKey = process.env.SECRET_KEY || 'fallback-secret-key';
 
@@ -286,11 +287,13 @@ exports.getProduct = async(req,res) =>{
             });
             return;
         }
-        const id = req.query.id
+        const id = req.query.id;
         
         await eCommerceDB.Product.findByPk(id).
             then((product) => res.send(product));
     } catch(err) {
+
+
         console.error(err.message);
         return res.status(500).json({error: 'An error occured while fetching the product'});
     }
@@ -595,4 +598,96 @@ exports.getTransactionDetails = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }
+
+exports.userRating = async (req, res) => {
+    try {
+        const user_id = req.query.user_id;
+        const product_id = req.query.product_id;
+
+        if (!user_id || !product_id) {
+            return res.status(400).send({
+                message: "Unable to find User or Product"
+            });
+        }
+
+        const userRating = await ProductRating.findOne({
+            where: { user_id, product_id }
+        });
+
+        if (userRating) {
+            const productRating = {
+                user_id,
+                product_id,
+                rating: userRating.rating
+            };
+
+            return res.status(200).send(productRating);
+        }
+
+        return res.status(404).send({
+            message: "Cannot find rating for the specified user and product"
+        });
+
+    } catch (error) {
+        console.error("Error rating the product:", error);
+        return res.status(500).send({
+            message: "Internal server error while fetching the rating"
+        });
+    }
+}
+
+exports.rateProduct = async(req, res) => {
+
+    const productRating = {
+        product_id: req.query.product_id,
+        user_id: req.query.product_id,
+        rating: req.body.rating
+    }
+
+    try{
+        if(!productRating.product_id || !productRating.user_id) {
+            res.status(400).send({
+                message: "product id or user id cannot be empty"
+            })
+
+        await eCommerceDB.ProductRating.create(productRating)
+        res.status(200).send({
+            message: "ratings added"
+        })
+        }
+    }catch(err) {
+        res.status(500).send({
+            message: "Internal sever error while rating the product"
+        })
+    }
+
+}
+
+exports.avgProductRating = async(req, res)=> {
+    const product_id = req.query.product_id;
+    try{
+        if(!product_id) {
+            res.status(400).send({
+                message: "product cannot be empty"
+        })
+        }
+
+        const ratingLst = await eCommerceDB.ProductRating.findAll({
+            where: {product_id: product_id}
+        });
+
+        const totalRating = ratingLst.reduce((sum, rating) => sum+ rating.rating, 0);
+
+        const averageRating = ratingLst.length>0? (totalRating/ratingLst.length).toFixed(1): 0
+
+        return res.status(200).json({"average_rating": averageRating});
+    }catch(erorr) {
+        res.status(500).send({
+            message: "Internal Server error while reteriving product rating"
+        })
+    }
+
+}
+
+//updateRating or update
 

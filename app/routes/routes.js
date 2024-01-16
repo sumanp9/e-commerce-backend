@@ -42,7 +42,13 @@ module.exports = app => {
 
     router.post("/checkout", checkoutController.checkout);
 
-    router.put("/transaction", controller.updateInventory);//inventory
+    router.put("/transaction", controller.updateInventory);
+
+    router.get("/user-rating", controller.userRating);
+    router.get("/average-rating", controller.avgProductRating);
+    router.post("/rating", controller.rateProduct);
+
+
 
     router.get("/transactions",  passport.authenticate('jwt', {session:false}), controller.getTransactions);//just transaction
     router.get("/transactionsDetails", passport.authenticate('jwt', {session:false}), controller.getTransactionDetails);

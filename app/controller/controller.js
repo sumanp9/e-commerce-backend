@@ -292,8 +292,6 @@ exports.getProduct = async(req,res) =>{
         await eCommerceDB.Product.findByPk(id).
             then((product) => res.send(product));
     } catch(err) {
-
-
         console.error(err.message);
         return res.status(500).json({error: 'An error occured while fetching the product'});
     }
@@ -306,7 +304,6 @@ exports.getCart = async(req, res) => {
            return res.status(400).send({
             message: "Content can not be empty!"
             });
-            return;
         }
 
         await eCommerceDB.Cart.findAll({
